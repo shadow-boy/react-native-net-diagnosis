@@ -185,23 +185,39 @@ const unsubscribe = NetDiagnosis.startTcpPing('www.google.com', 443, 4, (result)
 
 ### 端口扫描功能
 
-#### `startPortScan(host: string, beginPort: number, endPort: number, listener: PortScanResultListener): () => void`
-开始端口扫描。
+#### `startPortScan(host: string, ports: number[], listener: PortScanResultListener): () => void`
+开始端口扫描。支持扫描指定的端口列表，可以是不连续的端口。
 
 **参数:**
 - `host`: 目标主机
-- `beginPort`: 起始端口
-- `endPort`: 结束端口
+- `ports`: 要扫描的端口数组，例如 `[80, 443, 8080]` 或 `[20, 21, 22, 23, ..., 100]`
 - `listener`: 结果回调
 
+**示例1: 扫描特定端口**
 ```typescript
-const unsubscribe = NetDiagnosis.startPortScan('192.168.1.1', 80, 443, (result) => {
+// 扫描常用端口
+const commonPorts = [21, 22, 80, 443, 3306, 8080];
+const unsubscribe = NetDiagnosis.startPortScan('192.168.1.1', commonPorts, (result) => {
   console.log(`端口 ${result.port}: ${result.isOpen ? '开放' : '关闭'}`);
   if (result.error) {
     console.log(`错误: ${result.error}`);
   }
 });
 ```
+
+**示例2: 扫描端口范围**
+```typescript
+// 扫描端口 80-100
+const ports = Array.from({ length: 21 }, (_, i) => i + 80);
+const unsubscribe = NetDiagnosis.startPortScan('192.168.1.1', ports, (result) => {
+  console.log(`端口 ${result.port}: ${result.isOpen ? '开放' : '关闭'}`);
+});
+```
+
+**注意事项:**
+- 底层SDK会按照数组顺序逐个扫描端口
+- 建议单次扫描端口数量不超过100个，大量端口建议分批扫描
+- 使用 `stopPortScan()` 可以随时停止扫描
 
 #### `stopPortScan()`
 停止端口扫描。

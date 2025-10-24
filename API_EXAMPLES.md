@@ -202,10 +202,13 @@ ports.forEach(port => {
 
 ## 端口扫描
 
-### 扫描常用端口
+### 扫描特定端口列表
 
 ```typescript
-const unsubscribe = NetDiagnosis.startPortScan('192.168.1.1', 80, 85, (result) => {
+// 扫描常用端口
+const commonPorts = [21, 22, 80, 443, 3306, 8080, 8443];
+
+const unsubscribe = NetDiagnosis.startPortScan('192.168.1.1', commonPorts, (result) => {
   if (result.isOpen) {
     console.log(`✅ 端口 ${result.port} 开放`);
   } else {
@@ -224,24 +227,21 @@ setTimeout(() => {
 }, 10000);
 ```
 
-### 扫描Web服务端口
+### 扫描端口范围
 
 ```typescript
 const host = 'example.com';
-const webPorts = { start: 80, end: 85 }; // 80, 81, 82, 83, 84, 85
+
+// 生成端口范围 80-100
+const ports = Array.from({ length: 21 }, (_, i) => i + 80);
 
 const openPorts: string[] = [];
 
-const unsubscribe = NetDiagnosis.startPortScan(
-  host,
-  webPorts.start,
-  webPorts.end,
-  (result) => {
-    if (result.isOpen) {
-      openPorts.push(result.port);
-    }
+const unsubscribe = NetDiagnosis.startPortScan(host, ports, (result) => {
+  if (result.isOpen) {
+    openPorts.push(result.port);
   }
-);
+});
 
 // 扫描完成后显示结果
 setTimeout(() => {
@@ -256,13 +256,37 @@ setTimeout(() => {
 ```typescript
 const host = '192.168.1.100';
 
-// MySQL, PostgreSQL, MongoDB, Redis
-const dbPorts = [3306, 5432, 27017, 6379];
+// MySQL, PostgreSQL, MongoDB, Redis, SQL Server, Oracle
+const dbPorts = [3306, 5432, 27017, 6379, 1433, 1521];
 
-dbPorts.forEach(port => {
-  NetDiagnosis.startPortScan(host, port, port, (result) => {
-    console.log(`数据库端口 ${result.port}:`, result.isOpen ? '开放' : '关闭');
-  });
+const unsubscribe = NetDiagnosis.startPortScan(host, dbPorts, (result) => {
+  console.log(`数据库端口 ${result.port}:`, result.isOpen ? '✅ 开放' : '❌ 关闭');
+});
+
+// 5秒后停止
+setTimeout(() => {
+  NetDiagnosis.stopPortScan();
+  unsubscribe();
+}, 5000);
+```
+
+### 混合扫描示例
+
+```typescript
+// 组合常用服务端口和自定义端口范围
+const ftpPorts = [20, 21]; // FTP
+const sshPort = [22]; // SSH
+const webPorts = Array.from({ length: 11 }, (_, i) => i + 80); // 80-90
+const customPorts = [8000, 8080, 8443, 9000]; // 自定义
+
+const allPorts = [...ftpPorts, ...sshPort, ...webPorts, ...customPorts];
+
+console.log(`开始扫描 ${allPorts.length} 个端口...`);
+
+const unsubscribe = NetDiagnosis.startPortScan('192.168.1.1', allPorts, (result) => {
+  if (result.isOpen) {
+    console.log(`🎯 发现开放端口: ${result.port}`);
+  }
 });
 ```
 

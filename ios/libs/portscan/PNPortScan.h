@@ -13,7 +13,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface PNPortScan : NSObject
 + (instancetype)shareInstance;
-- (void)portScan:(NSString *)host beginPort:(NSUInteger)beginPort endPort:(NSUInteger)endPort completeHandler:(NetPortScanHandler)handler;
+
+// 端口扫描：接收端口数组
+- (void)portScan:(NSString *)host ports:(NSArray<NSNumber *> *)ports completeHandler:(NetPortScanHandler)handler;
+
 - (BOOL)isDoingScanPort;
 - (void)stopPortScan;
 @end

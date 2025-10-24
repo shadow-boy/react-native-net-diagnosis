@@ -281,19 +281,17 @@ class NetDiagnosisSDK {
   /**
    * 开始端口扫描
    * @param host 主机地址
-   * @param beginPort 起始端口
-   * @param endPort 结束端口
+   * @param ports 要扫描的端口数组，例如：[80, 443, 8080] 或 [20, 21, 22, 23, ..., 100]
    * @param listener 结果监听器
    * @returns 取消订阅函数
    */
   startPortScan(
     host: string,
-    beginPort: number,
-    endPort: number,
+    ports: number[],
     listener: PortScanResultListener
   ): () => void {
     if (Platform.OS === 'ios') {
-      NativeNetDiagnosis.startPortScan(host, beginPort, endPort);
+      NativeNetDiagnosis.startPortScan(host, ports);
       const subscription = eventEmitter?.addListener(
         'onPortScanResult',
         listener as any

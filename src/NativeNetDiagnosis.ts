@@ -67,7 +67,7 @@ export interface Spec extends TurboModule {
   isTcpPinging(): boolean;
 
   // 端口扫描功能
-  startPortScan(host: string, beginPort: number, endPort: number): void;
+  startPortScan(host: string, ports: number[]): void;
   stopPortScan(): void;
   isPortScanning(): boolean;
 

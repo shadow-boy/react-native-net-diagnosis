@@ -99,9 +99,16 @@ export default function App() {
   // 端口扫描测试
   const handlePortScan = () => {
     clearResults();
-    addResult(`开始扫描 ${host} 端口 20-50...`);
     
-    const unsubscribe = NetDiagnosis.startPortScan(host, 20, 50, (result) => {
+    // 示例1: 扫描常用端口
+    const commonPorts = [21, 22, 23, 25, 80, 443, 3306, 8080, 8443];
+    addResult(`开始扫描 ${host} 的常用端口: ${commonPorts.join(', ')}...`);
+    
+    // 示例2: 扫描端口范围 (取消注释以使用)
+    // const ports = Array.from({ length: 31 }, (_, i) => i + 20); // 20-50
+    // addResult(`开始扫描 ${host} 端口 20-50...`);
+    
+    const unsubscribe = NetDiagnosis.startPortScan(host, commonPorts, (result) => {
       addResult(
         `端口 ${result.port}: ${result.isOpen ? '开放' : '关闭'}${
           result.error ? ` (错误: ${result.error})` : ''

@@ -4,6 +4,7 @@
 #import "libs/tcpping/PNTcpPing.h"
 #import "libs/udptracert/PNUdpTraceroute.h"
 #import "libs/lanscan/PNetMLanScanner.h"
+#import "libs/portscan/PNPortScan.h"
 #import <React/RCTBridge.h>
 #import <React/RCTEventEmitter.h>
 
@@ -208,13 +209,16 @@ RCT_EXPORT_MODULE()
 
 #pragma mark - Port Scan
 
-- (void)startPortScan:(NSString *)host beginPort:(double)beginPort endPort:(double)endPort
+- (void)startPortScan:(NSString *)host ports:(NSArray<NSNumber *> *)ports
 {
+    if (ports.count == 0) {
+        return;
+    }
+    
     __weak __typeof__(self) weakSelf = self;
-    [[PhoneNetManager shareInstance] netPortScan:host
-                                       beginPort:(NSUInteger)beginPort
-                                         endPort:(NSUInteger)endPort
-                                 completeHandler:^(NSString * _Nullable port, BOOL isOpen, PNError * _Nullable sdkError) {
+    [[PNPortScan shareInstance] portScan:host
+                                   ports:ports
+                         completeHandler:^(NSString * _Nullable port, BOOL isOpen, PNError * _Nullable sdkError) {
         __strong __typeof__(weakSelf) strongSelf = weakSelf;
         if (strongSelf && strongSelf->hasListeners) {
             NSMutableDictionary *result = [NSMutableDictionary dictionary];
@@ -230,12 +234,12 @@ RCT_EXPORT_MODULE()
 
 - (void)stopPortScan
 {
-    [[PhoneNetManager shareInstance] netStopPortScan];
+    [[PNPortScan shareInstance] stopPortScan];
 }
 
 - (NSNumber *)isPortScanning
 {
-    BOOL result = [[PhoneNetManager shareInstance] isDoingPortScan];
+    BOOL result = [[PNPortScan shareInstance] isDoingScanPort];
     return @(result);
 }
 

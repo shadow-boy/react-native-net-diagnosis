@@ -123,7 +123,13 @@ static PhoneNetManager *sdkManager_instance = nil;
         @throw [NSException exceptionWithName:NSInvalidArgumentException reason:@"no port scan complete Handler" userInfo:nil];
         return;
     }
-    [[PNPortScan shareInstance] portScan:host beginPort:beginPort endPort:endPort completeHandler:handler];
+    
+    // 将端口范围转换为数组，调用新接口
+    NSMutableArray<NSNumber *> *ports = [NSMutableArray array];
+    for (NSUInteger port = beginPort; port <= endPort; port++) {
+        [ports addObject:@(port)];
+    }
+    [[PNPortScan shareInstance] portScan:host ports:ports completeHandler:handler];
 }
 
 - (BOOL)isDoingPortScan
