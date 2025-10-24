@@ -1,6 +1,7 @@
 {
   "name": "react-native-net-diagnosis",
   "version": "0.1.0",
+  "private": true,
   "description": "ios平台网络诊断SDK，支持对ip和域名的ping,traceroute(udp,icmp协议)，支持tcp ping, 端口扫描，nslookup,局域网活跃ip扫描等功能-----------Ios platform network diagnostic SDK, support ip and domain name ping, traceroute (udp, icmp protocol), support tcp ping, port scan, nslookup, LAN active ip scan and other functions",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
@@ -37,7 +38,7 @@
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
-    "prepare": "bob build",
+    "prepare": "node scripts/prepare-build.js",
     "release": "release-it --only-version"
   },
   "keywords": [
