@@ -48,6 +48,35 @@
     return !self.isStopPingThread;
 }
 
+- (BOOL)isResponseFromScanIpWithAddress:(struct sockaddr_storage *)retAddr buffer:(char *)buffer len:(int)len
+{
+    if (self.scanIp.length == 0) {
+        return NO;
+    }
+
+    if (retAddr != NULL && retAddr->ss_family == AF_INET) {
+        struct sockaddr_in *addr = (struct sockaddr_in *)retAddr;
+        char sourceIp[INET_ADDRSTRLEN] = {0};
+        const char *result = inet_ntop(AF_INET, &(addr->sin_addr), sourceIp, sizeof(sourceIp));
+        if (result != NULL && strcmp(sourceIp, [self.scanIp UTF8String]) == 0) {
+            return YES;
+        }
+    }
+
+    if (buffer != NULL && len >= sizeof(PNetIPHeader)) {
+        const PNetIPHeader *ipHeader = (const PNetIPHeader *)buffer;
+        if ((ipHeader->versionAndHeaderLength & 0xF0) == 0x40) {
+            char sourceIp[INET_ADDRSTRLEN] = {0};
+            const char *result = inet_ntop(AF_INET, ipHeader->sourceAddress, sourceIp, sizeof(sourceIp));
+            if (result != NULL && strcmp(sourceIp, [self.scanIp UTF8String]) == 0) {
+                return YES;
+            }
+        }
+    }
+
+    return NO;
+}
+
 - (BOOL)settingUHostSocketAddressWithIp:(NSString *)host
 {
     const char *hostaddr = [host UTF8String];
@@ -110,6 +139,11 @@
         struct sockaddr_storage ret_addr;
         socklen_t addrLen = sizeof(ret_addr);
         void *buffer = malloc(65535);
+        if (buffer == NULL) {
+            log4cplus_warn("PhoneNetSDK-LanScanner", "ping %s , malloc receive buffer failed..\n",[self.scanIp UTF8String]);
+            res = YES;
+            continue;
+        }
         
         size_t bytesRead = recvfrom(lan_scan_socket_client, buffer, 65535, 0, (struct sockaddr *)&ret_addr, &addrLen);
         
@@ -118,14 +152,25 @@
             res = YES;
         }else if(bytesRead == 0){
             log4cplus_warn("PhoneNetSDK-LanScanner", "ping %s , receive icmp packet error , bytesRead=0",[self.scanIp UTF8String]);
+            res = YES;
         }else{
+            BOOL isExpectedSource = [self isResponseFromScanIpWithAddress:&ret_addr buffer:(char *)buffer len:(int)bytesRead];
+            BOOL isExpectedPacket = [PhoneNetDiagnosisHelper isValidPingResponseWithBuffer:(char *)buffer
+                                                                                       len:(int)bytesRead
+                                                                                       seq:index
+                                                                                identifier:identifier];
             
-            if ([PhoneNetDiagnosisHelper isValidPingResponseWithBuffer:(char *)buffer len:(int)bytesRead]) {
+            if (isExpectedSource && isExpectedPacket) {
                 [self.delegate simplePing:self receivedPacket:self.scanIp];
+                free(buffer);
                 [self stopPing];
                 break;
             }
+            
+            res = YES;
         }
+
+        free(buffer);
         
         if (res) {
             index++;
