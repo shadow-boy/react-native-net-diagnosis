@@ -7,6 +7,10 @@
 #import "libs/portscan/PNPortScan.h"
 #import <React/RCTBridge.h>
 #import <React/RCTEventEmitter.h>
+#import <netdb.h>
+#import <netinet/in.h>
+#import <arpa/inet.h>
+#import <sys/socket.h>
 
 @interface NetDiagnosis () <PNetMLanScannerDelegate>
 @property (nonatomic, strong) PNTcpPing *tcpPingInstance;
@@ -35,7 +39,8 @@ RCT_EXPORT_MODULE()
         @"onPortScanResult",
         @"onLanScanActiveIp",
         @"onLanScanProgress",
-        @"onLanScanFinished"
+        @"onLanScanFinished",
+        @"onLanScanHostname"
     ];
 }
 
@@ -303,6 +308,46 @@ RCT_EXPORT_MODULE()
         [self sendEventWithName:@"onLanScanActiveIp"
                            body:@{@"ip": ip ?: @""}];
     }
+
+    // 异步反向 DNS 解析活跃 IP 的主机名，解析成功后单独回传，
+    // 避免阻塞局域网扫描线程（部分 IP 无 PTR 记录时 getnameinfo 可能较慢）。
+    NSString *targetIp = ip ?: @"";
+    if (targetIp.length > 0) {
+        dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+            NSString *hostname = [self reverseLookupHostname:targetIp];
+            if (hostname.length > 0 && self->hasListeners) {
+                [self sendEventWithName:@"onLanScanHostname"
+                                   body:@{@"ip": targetIp, @"hostname": hostname}];
+            }
+        });
+    }
+}
+
+/// 通过 getnameinfo 对 IPv4 地址做反向 DNS（PTR）解析，失败或解析回 IP 本身时返回 nil。
+- (NSString *)reverseLookupHostname:(NSString *)ip
+{
+    if (ip.length == 0) {
+        return nil;
+    }
+    struct sockaddr_in sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sin_family = AF_INET;
+    sa.sin_len = sizeof(sa);
+    if (inet_pton(AF_INET, [ip UTF8String], &(sa.sin_addr)) != 1) {
+        return nil;
+    }
+    char hostBuffer[NI_MAXHOST];
+    int rc = getnameinfo((struct sockaddr *)&sa, sizeof(sa),
+                         hostBuffer, sizeof(hostBuffer),
+                         NULL, 0, NI_NAMEREQD);
+    if (rc != 0) {
+        return nil;
+    }
+    NSString *hostname = [NSString stringWithUTF8String:hostBuffer];
+    if (hostname.length == 0 || [hostname isEqualToString:ip]) {
+        return nil;
+    }
+    return hostname;
 }
 
 - (void)scanMlan:(PNetMLanScanner *)scanner percent:(float)percent

@@ -44,6 +44,11 @@ export interface LanScanProgressResult {
   percent: number;
 }
 
+export interface LanScanHostnameResult {
+  ip: string;
+  hostname: string;
+}
+
 // 事件监听器类型
 export type PingResultListener = (result: PingResult) => void;
 export type TracerouteResultListener = (result: TracerouteResult) => void;
@@ -55,6 +60,7 @@ export type PortScanResultListener = (result: PortScanResult) => void;
 export type LanScanActiveIpListener = (result: LanScanActiveIpResult) => void;
 export type LanScanProgressListener = (result: LanScanProgressResult) => void;
 export type LanScanFinishedListener = () => void;
+export type LanScanHostnameListener = (result: LanScanHostnameResult) => void;
 
 // 创建事件发射器
 const eventEmitter =
@@ -355,12 +361,14 @@ class NetDiagnosisSDK {
    * @param onActiveIp 发现活跃IP时的回调
    * @param onProgress 扫描进度回调
    * @param onFinished 扫描完成回调
+   * @param onHostname 反向解析出主机名时的回调（异步，可能晚于 onActiveIp）
    * @returns 取消订阅函数
    */
   startLanScan(
     onActiveIp: LanScanActiveIpListener,
     onProgress?: LanScanProgressListener,
-    onFinished?: LanScanFinishedListener
+    onFinished?: LanScanFinishedListener,
+    onHostname?: LanScanHostnameListener
   ): () => void {
     if (Platform.OS === 'ios') {
       NativeNetDiagnosis.startLanScan();
@@ -378,6 +386,12 @@ class NetDiagnosisSDK {
       if (onFinished) {
         subscriptions.push(
           eventEmitter?.addListener('onLanScanFinished', onFinished as any)
+        );
+      }
+
+      if (onHostname) {
+        subscriptions.push(
+          eventEmitter?.addListener('onLanScanHostname', onHostname as any)
         );
       }
 
